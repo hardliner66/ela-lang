@@ -1,0 +1,19 @@
+/* 
+  Module random
+  Created in 2011-2016 by Basil Voronkov
+*/
+import libCore#elalib@cm datetime
+open monad io
+
+rnd !seed !min !max = cm.rnd seed min max
+
+rndIO !min !max = do
+  dtn <- datetime.now
+  return $ rnd (datetime.milliseconds dtn) min max ::: IO
+
+rndList !seed !min !max = makeList $ cm.createRnd seed
+  where makeList obj = cm.getRnd obj min max :: (& makeList obj)
+
+rndListIO !min !max = do
+  dtn <- datetime.now
+  return $ rndList (datetime.milliseconds dtn) min max ::: IO

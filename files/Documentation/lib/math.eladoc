@@ -1,0 +1,66 @@
+#file math.ela
+#title math
+#category Ela Standard Library
+This module contains generic mathematical functions. 
+
+=Functions
+#fact x
+Computes the factorial function. This function infers a context automatically.
+
+#fib 3
+Returns the nth fibonacci number. This function infers a context automatically.
+
+#fibs
+An infinite list of fibonacci numbers (requires an explicit content to be dispatched):
+>>>take 10 fibs ::: Int
+
+#choose n k
+Binomial coefficients function. This function infers a context automatically.
+
+#egcd 25 5
+An extension to Euclidean algorithm which computes, besides the greatest common divisor
+of given integers, the coefficients of Bézout's identity. This function
+infers a context automatically.
+
+#divrem x y
+Divides two numbers and returns a remainder.
+
+#quotrem x y
+Divides two numbers (using integer division, truncated towards zero) and returns a remainder.
+
+#/. x y
+An alias for divrem function.
+
+#primes
+A list of prime numbers.
+
+#primes'all
+A lazy list of all prime numbers (requires an explicit context to be dispatched):
+>>>take 10 primes'all ::: Int
+
+#primesR
+Given a range of integers by its lower and upper limit, constructs a list of all
+prime numbers in that range. 
+
+#isPrime n
+Checks if a given number is a prime.
+
+#coprime a b
+Determine whether two positive integer numbers are coprime. Two numbers are coprime if their greatest common divisor equals 1.
+
+#goldbach a
+A Goldbach's conjecture. Goldbach's conjecture says that every positive even number 
+greater than 2 is the sum of two prime numbers. This function finds the two prime numbers
+that sums up to a given even integer and returns a tuple with result. 
+
+#totient a
+Calculate Euler's totient function.
+
+#pythag 12 2
+Pythagorean theorem.
+
+#vdc 2 2
+Van der Corput Sequence.
+
+#vdcseq 2
+Generates an infinite list with the Van der Corput Sequence.

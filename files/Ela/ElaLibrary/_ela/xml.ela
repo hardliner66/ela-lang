@@ -1,0 +1,60 @@
+open libXml#elalib@xml
+open generic record integer datetime string guid
+
+class XmlAble a where
+  xmlSerialize a->_
+
+instance XmlAble Char String Integer Int Bool Long Single Double DateTime Guid where
+  xmlSerialize = fmt ""
+
+instance XmlAble Unit where
+  xmlSerialize _ = ""
+
+type XmlSection = CData (String a)
+
+toXmlString !rec = toString $ descendants rec (fields rec)
+
+fromXmlString !str = xml.fromString str
+
+attribute # private
+attribute "'value" _ = ""
+attribute "'children" _ = ""
+attribute nam val = " " +> nam +> "=\"" +> xmlSerialize val +> "\""
+
+attributes # private
+attributes rec [] = ""
+attributes rec (f::fs)
+  | not (val is Record) = attribute f val +> attributes rec fs
+  | else = element f val
+  where val = getField f rec
+
+descendants # private
+descendants rec [] = ""
+descendants rec (f::fs) = element f val +> descendants rec fs
+  where val = getField f rec
+
+element # private
+element nam rec
+  | content = head +> ">" +> value +> childs +> "</" +> nam +> ">"
+  | else = head +> "/>"
+  where head = "<" +> nam +> attributes rec fields
+        fields = record.fields rec
+        value = body rec
+        childs = toString $ children rec fields
+        content = length value > 0 || length childs > 0
+
+body # private
+body rec
+  | isField "'value" rec = 
+    match rec.'value with
+      CData val = "<![CDATA[" ++ val ++ "]]>"
+      val = val
+  | else = ""
+
+children # private
+children rec fields
+  | isField "'children" rec = walk rec.'children
+  | else = ""
+  where walk (x::xs) = descendants x (record.fields x) +> walk xs
+        walk [] = ""
+

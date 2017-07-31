@@ -1,0 +1,8 @@
+
+
+xs = 1::xs
+a = a + 1
+
+##[trace spec]#
+
+

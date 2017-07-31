@@ -1,0 +1,163 @@
+#file io.ela
+#title io
+#category Ela Standard Library
+Module IO contains an implementation of IO monad, IO related functions implemented
+in monadic style as well as support for console IO, file IO and state mutation in monadic style
+through IO monad.
+
+=IO
+
+#IO
+This type is used to represent input and output operations. An `IO` type doesn't provide any open
+constructors. You can operate with it using helper functions `mkIO` and `execIO`.
+Type `IO` is a monad and provides instances for classes `Functor`, `Union`, `Pointed` and `Failure`.
+For convinience this type also provides an instance for class `Show`, however applying function `show`
+to an instance of this type always returns an empty string.
+
+#mkIO a
+Constructs an IO action from a given argument.
+
+#execIO a
+Executes a given IO action.
+
+=Console IO
+
+#putStr a
+This action writes a given string to a standard output.
+
+#putStrLn a
+This action writes a given string and a new line to a standard output.
+
+#readStr
+This action reads a string from a standard output.
+
+#put a
+This action formats a given value to a string using `show` function and writes it to a standard output.
+
+#putStrLn a
+This action formats a given value to a string using `show` function and writes it and a new line to a standard output.
+
+#readAny
+This action reads a string from a standard output and converts it to a specified type using `gread` function.
+>>do
+>>  putStrLn "What is your height?"
+>>  x <- readAny
+>>  putStrLn "What is your weight?"
+>>  y <- readAny
+>>  let rec = x / y
+>>  putStr (
+>>    if rec > 2.25 then "You're too thin!"
+>>    else if rec < 2 then "You're too heavy!"
+>>    else "You're OK...")
+>>  putStr x
+
+#interact f
+This function takes a function `f`, reads a line from standard input, applies a function `f` to this line
+and passes the result of this application to standard output.
+
+=File IO
+#FileMode
+Specifies a mode in which file should be opened, e.g.:
+  * `AppendMode` - append data to the end of the existing file
+  * `CreateMode` - create a new (or truncate a file if it already exists)
+  * `OpenMode` - open an already existing file
+  * `OpenCreateMode` - open an alreadt existing file or create a new one if a file doesn't exist
+  * `TruncateMode` - truncate an existing file to zero bytes
+
+#FileAccess
+Specifies how to share the access to the file with other programs.
+  * `ReadAccess` - only reading is allowed
+  * `WriteAccess` - only writing is allowed
+  * `ReadWriteAccess` - both reading and writing is allowed
+
+#openFile fn mode acc
+Opens a file `fn` using the mode `mode` (specified by an instance of `FileMode` type) and access mode `acc`
+(specified by an instance of `FileAccess` type).//br
+This function returns a file handle that should be closed using `closeFile` function.
+
+#readFile fn mode
+This function is defined like so:
+>>readFile fn mode = openFile fn mode ReadMode
+
+#writeFile fn mode
+This function is defined like so:
+>>writeFile fn Mode = openFile fn mode WriteMode
+
+#closeFile fh
+Closes a file obtained by `openFile` function:
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode ReadAccess
+>>  closeFile fh
+
+#readLine fh
+Reads a line from a file opened by `openFile` function:
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode ReadAccess
+>>  line <- readLine fh
+>>  closeFile fh
+If a file stream is at the end position this function would return an instance of a unit.
+
+#readAll fh
+Reads all contents from a file opened by `openFile` function and returns a string:
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode ReadAccess
+>>  lines <- readLines fh
+>>  closeFile fh
+
+#writeStr str fh
+Writes a string to a file opened by `openFile` function:
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode WriteAccess
+>>  writeStr "Hello, world!" fh
+>>  closeFile fh
+
+#writeLines pred xs fh
+Accepts a list of values, a predicate, a file handle (obtained from `openFile` function) and writes each value from a list 
+if this value satisfies the predicate as a separate line to the given file.
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode WriteAccess
+>>  writeLines (\_ -> true) ["123", "abc", "defg", "4567"] fh
+>>  closeFile fh
+
+#writeAllLines xs fh
+This function is defined as follows:
+>>writeAllLines = writeLines (\_ -> true)
+
+#readLines pred fh
+Accepts a predicator function, a file handle (obtained from `openFile` function) a reads all lines from a given file into a list
+if these lines satisfy a given predicate.
+>>//For a file that contains lines written in the code sample for 'writeLines' function:
+>>do
+>>  fh <- openFile "c:\\test.txt" OpenMode ReadAccess
+>>  xs <- readLines (<>"123") fh //All lines except "123" are read
+>>  closeFile fh
+>>  return xs
+
+#readAllLines fh
+This function is defined as follows:
+>>readAllLines = readLines (\_ -> true)
+
+=Stateful programming
+
+#ref x
+Creates a reference cell (like in OCaml language) that can only be operated within the `IO` monad:
+>>do
+>>  x <- ref 12
+
+#valueof x
+Obtains a value from a reference cell, created using `ref`:
+>>do
+>>  x <- ref 12
+>>  y <- valueof x
+
+#mutate value rf
+Mutates a reference cell `rf` by changing its value to `value`:
+>>do
+>>  x <- ref 12
+>>  y <- mutate 14 y
+
+#:= rf value
+An alias for `mutate` function with reverse argument order:
+>>do
+>>  x <- ref 12
+>>  y := 14

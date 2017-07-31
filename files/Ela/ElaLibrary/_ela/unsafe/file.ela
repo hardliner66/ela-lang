@@ -1,0 +1,33 @@
+/* 
+  "Dirty" io module
+  Created in 2012, 2016 by Basil Voronkov
+*/
+import libIO#elalib@io
+
+readLines !fl
+  | not flag = &fail fh
+  | else = readLines1 ()
+  where (flag,fh) = io.openFile fl "OpenMode" "ReadAccess"
+        readLines1 ()
+          | not flag = &fail str
+          | else = readLines2 ()
+          where (flag,str) = io.readLines fh
+                readLines2 ()
+                  | not flag = &fail res
+                  | else = str
+                  where (flag,res) = io.closeFile fh
+
+writeLines !xs !fl
+  | not flag = &fail res1
+  | else = write xs
+  where (flag,res1) = io.truncateFile fl
+        write (x::xs)
+          | not flag = &fail res
+          | else = write xs
+          where (flag,res) = io.writeLine x fl
+        write [] = ()
+
+writeText !str !fl
+  | not flag = &fail str
+  | else = ()
+  where (flag,res) = io.writeText str fl

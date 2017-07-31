@@ -1,0 +1,20 @@
+open list
+
+class Monoid a where
+  mempty a
+  mappend a->a->a
+  mconcat a->a
+
+instance Monoid where
+  mconcat xss = foldr mappend mempty $ xss
+
+instance Monoid List where
+  mempty = []
+  mappend = (++)
+  mconcat xss = [x \\ xs <- xss, x <- xs]
+
+//mconcat $ map (\x -> map (*x) [1..10]) [1..10]
+
+map (*2) <| filter (>10) <| [1..20]
+
+

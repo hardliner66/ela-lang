@@ -1,0 +1,18 @@
+#file file.ela
+#title file
+#category Ela Standard Library
+Module 'file' contains input and output functions. 
+
+=Functions
+
+#readLines fn
+Reads all lines from a file into a string.
+
+#writeLines xs fl
+This function accepts a list of string a name of a file and writes these strings one by one
+to a provided file. If the file doesn't exist, it is created. If the file exists, it is 
+truncated.
+
+#writeText txt fl
+This functions accepts a string and a name of a file and writes this string to a file. If the
+file doesn't exist, it is created. If the file exists, it is truncated.

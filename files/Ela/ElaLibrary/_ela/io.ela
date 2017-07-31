@@ -1,0 +1,106 @@
+/* 
+  Module io
+  Created in 2013-2015 by Basil Voronkov
+*/
+open monad generic unsafe.console unsafe.file libIO#elalib@unsafeIO
+import unsafe.cell
+
+//Type and instances
+type IO = IO a # private
+  deriving Failure
+
+instance Pointed IO where
+  point x = IO x
+
+instance Union IO where
+  join (IO a) 
+    | a is IO = mkIO $ execIO a
+    | else = &fail ("Union IO.join: Expected IO. Got " ++ (typeName a) ++ ".")
+
+instance Functor IO where
+  fmap f x = mkIO (f $ execIO x)
+
+instance Show IO where
+  show _ = ""
+
+execIO (IO a)
+  | a is Fun  = a ()
+  | else      = a
+
+mkIO a = IO a
+
+//Console IO
+put s = putStr $ show s
+
+putLn s = putStrLn $ show s
+
+putStr s = mkIO (\_ -> write s)
+
+putStrLn s = putStr (s ++ "\r\n")
+
+readStr = mkIO (\_ -> readn ())
+
+readAny = mkIO (\_ -> gread $ readn())
+
+interact f = do s <- readStr
+              putStr (f s)
+
+//File IO
+type FileMode = AppendMode | CreateMode | OpenMode | OpenCreateMode | TruncateMode
+type FileAccess = ReadAccess | WriteAccess | ReadWriteAccess
+type FileStream = FileStream a # private
+
+openFile fn mode acc = mkIO (\_ -> openf (consName mode) (consName acc))
+  where ms = consName mode
+        as = consName acc
+        openf ms as
+          | flag = FileStream fh
+          | else = &fail fh
+          where (flag,fh) = unsafeIO.openFile fn ms as
+
+readFile fn mode = openFile fn mode ReadAccess
+
+writeFile fn mode = openFile fn mode WriteAccess
+
+closeFile (FileStream f) = mkIO (\_ -> unsafeIO.closeFile f)
+
+readLine (FileStream f) = mkIO (\_ ->
+  let (flag,res) = unsafeIO.readLine f in if flag then res else &fail res)
+
+readAllStr (FileStream f) = mkIO (\_ ->
+  let (flag,res) = unsafeIO.readLines f in if flag then res else &fail res)
+
+readAllLines = readLines (\_ -> true)
+
+readLines pred fh = readLines (\_ -> readLine fh) []
+  where
+    readLines fun xs = do
+      res <- readLine fh
+      if res is Unit
+        then return xs
+        else if pred res 
+        then readLines pred (res :: xs)
+        else readLines pred xs
+
+writeStr str (FileStream f) = mkIO (\_ ->
+  let (flag,res) = unsafeIO.writeString str f in if flag then res else &fail res)
+
+writeLine str = writeStr (str ++ "\r\n")
+
+writeLines pred [] _ = return $ mkIO (\_ -> ())
+writeLines pred (x::xs) fh = do
+  if pred x 
+    then writeStr (x ++ "\r\n") fh
+    else return ()
+  writeLines pred xs fh
+
+writeAllLines = writeLines (\_ -> true)
+
+//Mutation
+ref x = mkIO (\_ -> cell.ref x)
+
+valueof x = mkIO (\_ -> cell.valueof x)
+
+mutate e rf = mkIO (\_ -> cell.mutate e rf)
+
+r := v = mutate v r

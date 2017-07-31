@@ -1,0 +1,225 @@
+/*
+  Module monad
+  Created by Basil Voronkov in 2013-2016
+*/
+open generic core list tuple
+
+/* Functor */
+class Functor a where
+  fmap _->a->_ //a >>= return . f
+
+instance Functor where
+  fmap f xs
+    | consIndex xs == 0 = xs
+    | max == 1 = consCreate (consCode xs) (f <| consParamValue 0 xs)
+    | else = iter (consCreate <| consCode xs) 0
+    where max = consParamNumber xs
+          iter cf n 
+            | n < max = let v = consParamValue n xs in 
+                        if isAlgebraic v 
+                          then iter (cf <| fmap f v) (n+1)
+                          else iter (cf <| f v) (n+1)
+            | else = cf
+
+instance Functor Fun where
+  fmap f xs = f xs
+
+instance Functor Maybe where
+  fmap f (Some x) = Some (f x)
+  fmap _ None = None
+
+instance Functor List where
+  fmap = map
+
+instance Functor Either where
+  fmap g (Right x) = Right (g x)
+  fmap g (Left x) = Left x
+
+instance Functor Or where
+  fmap g (Fst x) = Fst (g x)
+  fmap g (Snd x) = Snd x
+  fmap g (Both x y) = Both (g x) (g y)
+
+instance Functor Tuple where
+  fmap = tuple.map
+
+/* Union */
+class Union a where
+  join a->_ //join m = m >>= id
+
+instance Union where
+  join xs
+    | num == 1  = let v = consParamValue 0 xs in
+                  if consCode v <> cc
+                    then &fail "Union.join: Invalid type."
+                    else cc `consCreate` (consParamValue 0 v)
+    | num == 2  = cat xs
+    | else = xs
+    where num = consParamNumber xs
+          cc = consCode xs
+
+cat # private
+cat xs 
+  | consParamNumber xs == 0 = xs
+  | else = consParamValue 0 xs ++ cat (consParamValue 1 xs)
+
+instance Union Maybe where
+  join (Some a)
+    | a is Maybe = a
+    | else = &fail "Union Maybe.join: Expected Maybe."
+  join None = None
+
+instance Union Either where
+  join (Right a)
+    | a is Either = a
+    | else = &fail "Union Either.join: Expected Either."
+  join (Left a) = Left a
+
+instance Union List where
+  join = list.concat
+
+instance Union Tuple where
+  join = tuple.concat
+
+/* Pointed */
+class Pointed a where
+  point _->a
+
+instance Pointed where
+  point x 
+    | consParamNumber cid == 1 = consCreate cid x
+    | else = cyc (consCreate cid x) (consParamNumber cid - 1)
+    where cid = consCodeByIndex context (typeConsNumber context - 1)
+          cyc fn 0 = fn
+          cyc fn n = cyc (fn default) (n - 1)
+
+instance Pointed List where
+  point x = [x]
+
+instance Pointed Maybe where
+  point = Some
+
+instance Pointed Either where
+  point = Right
+
+instance Pointed Tuple where
+  point x = (x,)
+
+return x = point x
+
+/* Copointed */
+class Copointed a where
+  extract a->_
+
+instance Copointed where
+  extract xs = consParamValue 0 xs
+
+instance Copointed List where
+  extract (x::[]) = x
+
+instance Copointed Maybe where
+  extract (Some x) = x
+
+instance Copointed Either where
+  extract (Right x) = x
+
+instance Copointed Tuple where
+  extract (x,) = x
+
+/* Failure */
+class Failure a where
+  failure _->a
+
+instance Failure where
+  failure = undefined
+
+instance Failure List where
+  failure _ = []
+
+instance Failure Maybe where
+  failure _ = None
+
+instance Failure Either
+instance Failure Tuple
+
+/* Functions */
+
+/* Core monadic operators */
+!xs >>= f = join (fmap f xs)
+
+!xs >>- ys = xs >>= (\_ -> ys)
+
+
+/* Basic monadic functions */
+f =<< x = x >>= f
+
+f >=> g = \x -> f x >>= g
+
+(<=<) = flip (>=>)
+
+(<$) = fmap << const
+
+($>) = flip (<$)
+
+(<$>) = fmap
+
+mapM f = sequence << fmap f
+
+forM = flip mapM
+
+sequence [] = return []
+sequence (!m::ms) = do
+  x <- m
+  xs <- sequence ms
+  return (x::xs)
+
+forever a = do a; forever a
+
+void x = () <$ x
+
+
+/* Generalization of list functions */
+
+mfilter p !ma = do
+  a <- ma
+  if p a then return a else default
+
+filterM p !xs = foldr go (return []) xs
+  where
+    go x r = do
+      flg <- p x
+      ys <- r
+      return (if flg then x::ys else ys)
+
+mapAndUnzipM f xs = sequence (map f xs) >>= return << unzip
+
+zipWithM f xs ys = sequence (zipWith f xs ys)
+
+foldM f z0 xs = foldr f' return xs z0
+  where f' x k z = f z x >>= k
+
+replicateM n x = sequence (replicate n x)
+
+/* Conditional execution of monadic expressions */
+guard true = return ()
+guard false = default
+
+when p s = if p then s else return ()
+
+unless p s =  if p then return () else s
+
+/* Monadic lifting operators */
+liftM f !m1 = do x1 <- m1; return (f x1)
+
+liftM2 f !m1 m2 = do x1 <- m1; x2 <- m2; return (f x1 x2)
+
+liftM3 f !m1 m2 m3 = do x1 <- m1; x2 <- m2; x3 <- m3; return (f x1 x2 x3)
+
+liftM4 f !m1 m2 m3 m4 = do x1 <- m1; x2 <- m2; x3 <- m3; x4 <- m4; return (f x1 x2 x3 x4)
+
+liftM5 f !m1 m2 m3 m4 m5 = do x1 <- m1; x2 <- m2; x3 <- m3; x4 <- m4; x5 <- m5; return (f x1 x2 x3 x4 x5)
+
+ap m1 m2 = do
+  x1 <- m1
+  x2 <- m2
+  return (x1 x2)

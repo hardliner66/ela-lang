@@ -1,0 +1,30 @@
+#title Exceptions
+#category Language Reference
+
+=Introduction
+This article discusses raising and handling errors in Ela. 
+
+=Raising errors in Ela
+In order to raise in error in Ela one should use a `fail` function that is declared in `prelude` like so:
+>>fail "Unexpected error."
+Doing so would cause a program to terminate immediately with the exception message specified as a first argument
+to `fail` function. However, as long as Ela support non-strict execution, one can use a deferred failure strategy
+by explicitly marking the `fail` function as lazy:
+>>&fail "Unexpected error."
+In this case an error would be raised only if you try to operate with the value returned by `fail` function. For example,
+the following code wouldn't raise an error:
+>>x = &fail "Unexpected error."
+However, the following code would terminate a program with an exception:
+>>x = &fail "Unexpected error."
+>>y = x * 2
+
+=Handling errors
+Sometimes you might need to check if an applied function was a success or a failure (e.g. returned a deferred "fail" like
+shown in a previous section). In order to that you can use `isError` function, defined in a standard prelude like so:
+>>_ /. 0 = &fail "Division by zero."
+>>x /. y = x / y
+>>res = 12 /. 0
+>>isError res
+In the example above an error is not raised and `isError` function returns `true`.//br
+You can a deferred `fail` in conjunction with `inError` function as a functional replacement for structured exception handling from
+imperative languages.

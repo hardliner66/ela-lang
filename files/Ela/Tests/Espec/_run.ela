@@ -1,0 +1,11 @@
+open espec 
+open basic
+open monad io
+
+res = []
+  |> addTests basic
+  |> run
+  //|> takeFailed
+  |> formatResult
+
+show res
